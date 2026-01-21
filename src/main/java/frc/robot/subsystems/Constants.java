@@ -2,7 +2,7 @@ package frc.robot.subsystems;
 import java.util.Set;
 
 public class Constants {
-  public static final Set<Integer> RED_HUB_TAGS = Set.of(11, 2, 9, 10, 8, 5);
+  public static final Set<Integer> RED_HUB_TAGS = Set.of(2, 10, 5);
 
   public static final Set<Integer> BLUE_HUB_TAGS = Set.of(18, 27, 26, 25, 21, 24);
 

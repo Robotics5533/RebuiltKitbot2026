@@ -1,0 +1,49 @@
+{
+  "version": "2025.0",
+  "command": {
+    "type": "sequential",
+    "data": {
+      "commands": [
+        {
+          "type": "named",
+          "data": {
+            "name": "shoot_load"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "Hub to HPS"
+          }
+        },
+        {
+          "type": "wait",
+          "data": {
+            "waitTime": 1.0
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "HPS to Hub"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "shoot_load"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "Hub to Tower"
+          }
+        }
+      ]
+    }
+  },
+  "resetOdom": true,
+  "folder": null,
+  "choreoAuto": false
+}

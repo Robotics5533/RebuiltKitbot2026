@@ -5,6 +5,7 @@ import static edu.wpi.first.units.Units.*;
 import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.auto.NamedCommands;
 import com.pathplanner.lib.commands.FollowPathCommand;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -13,15 +14,13 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
-// import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
+import frc.robot.commands.ShootLoad;
 import frc.robot.generated.TunerConstants;
-import frc.robot.subsystems.AutoAimSysId;
 import frc.robot.subsystems.CANFuelSubsystem;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 
 public class RobotContainer {
-    //just for limelight tuning
-    private final AutoAimSysId autoAimSysId;
 
 
 
@@ -41,9 +40,9 @@ public class RobotContainer {
       new SwerveRequest.SwerveDriveBrake();
   private final SwerveRequest.PointWheelsAt point =
       new SwerveRequest.PointWheelsAt();
-//   private final SwerveRequest.FieldCentric forwardStraight =
-//       new SwerveRequest.FieldCentric().withDriveRequestType(
-//           DriveRequestType.OpenLoopVoltage);
+  private final SwerveRequest.FieldCentric forwardStraight =
+      new SwerveRequest.FieldCentric().withDriveRequestType(
+          DriveRequestType.OpenLoopVoltage);
 
   private final Telemetry logger = new Telemetry(MaxSpeed);
 
@@ -58,9 +57,13 @@ public class RobotContainer {
   private final SendableChooser<Command> autoChooser;
 
   public RobotContainer() {
-    autoAimSysId = new AutoAimSysId(drivetrain);
+    NamedCommands.registerCommand(
+      "shoot_load",
+      ShootLoad.shootForTime(fuelSubsystem, 4.0)
+  );
     autoChooser = AutoBuilder.buildAutoChooser("Tests");
     SmartDashboard.putData("Auto Mode", autoChooser);
+    
 
     configureBindings();
 
@@ -122,8 +125,7 @@ public class RobotContainer {
 
     operator.leftBumper().whileTrue(fuelSubsystem.intakeCommand());
     operator.rightBumper().whileTrue(fuelSubsystem.launchCommand());
-//run limelight tests
-    joystick.rightTrigger().onTrue(drivetrain.runOnce(() -> autoAimSysId.start()));
+
 
     drivetrain.registerTelemetry(logger::telemeterize);
   }

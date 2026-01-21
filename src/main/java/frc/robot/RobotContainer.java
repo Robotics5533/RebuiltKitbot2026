@@ -13,7 +13,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
-import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
+// import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.AutoAimSysId;
 import frc.robot.subsystems.CANFuelSubsystem;
@@ -41,13 +41,14 @@ public class RobotContainer {
       new SwerveRequest.SwerveDriveBrake();
   private final SwerveRequest.PointWheelsAt point =
       new SwerveRequest.PointWheelsAt();
-  private final SwerveRequest.FieldCentric forwardStraight =
-      new SwerveRequest.FieldCentric().withDriveRequestType(
-          DriveRequestType.OpenLoopVoltage);
+//   private final SwerveRequest.FieldCentric forwardStraight =
+//       new SwerveRequest.FieldCentric().withDriveRequestType(
+//           DriveRequestType.OpenLoopVoltage);
 
   private final Telemetry logger = new Telemetry(MaxSpeed);
 
   private final CommandXboxController joystick = new CommandXboxController(0);
+  private final CommandXboxController operator = new CommandXboxController(1);
 
   public final CommandSwerveDrivetrain drivetrain =
       TunerConstants.createDrivetrain();
@@ -92,37 +93,37 @@ public class RobotContainer {
             -> point.withModuleDirection(
                 new Rotation2d(-joystick.getLeftY(), -joystick.getLeftX()))));
 
-    joystick.povUp().whileTrue(drivetrain.applyRequest(
-        () -> forwardStraight.withVelocityX(0.5).withVelocityY(0)));
-    joystick.povDown().whileTrue(drivetrain.applyRequest(
-        () -> forwardStraight.withVelocityX(-0.5).withVelocityY(0)));
-    joystick.povLeft().whileTrue(drivetrain.applyRequest(
-        () -> forwardStraight.withVelocityX(0).withVelocityY(0.5)));
-    joystick.povRight().whileTrue(drivetrain.applyRequest(
-        () -> forwardStraight.withVelocityX(0).withVelocityY(-0.5)));
+    // joystick.povUp().whileTrue(drivetrain.applyRequest(
+    //     () -> forwardStraight.withVelocityX(0.5).withVelocityY(0)));
+    // joystick.povDown().whileTrue(drivetrain.applyRequest(
+    //     () -> forwardStraight.withVelocityX(-0.5).withVelocityY(0)));
+    // joystick.povLeft().whileTrue(drivetrain.applyRequest(
+    //     () -> forwardStraight.withVelocityX(0).withVelocityY(0.5)));
+    // joystick.povRight().whileTrue(drivetrain.applyRequest(
+    //     () -> forwardStraight.withVelocityX(0).withVelocityY(-0.5)));
 
     // SysId routines
-    joystick.back()
-        .and(joystick.y())
-        .whileTrue(drivetrain.sysIdDynamic(Direction.kForward));
-    joystick.back()
-        .and(joystick.x())
-        .whileTrue(drivetrain.sysIdDynamic(Direction.kReverse));
-    joystick.start()
-        .and(joystick.y())
-        .whileTrue(drivetrain.sysIdQuasistatic(Direction.kForward));
-    joystick.start()
-        .and(joystick.x())
-        .whileTrue(drivetrain.sysIdQuasistatic(Direction.kReverse));
+    // joystick.back()
+    //     .and(joystick.y())
+    //     .whileTrue(drivetrain.sysIdDynamic(Direction.kForward));
+    // joystick.back()
+    //     .and(joystick.x())
+    //     .whileTrue(drivetrain.sysIdDynamic(Direction.kReverse));
+    // joystick.start()
+    //     .and(joystick.y())
+    //     .whileTrue(drivetrain.sysIdQuasistatic(Direction.kForward));
+    // joystick.start()
+    //     .and(joystick.x())
+    //     .whileTrue(drivetrain.sysIdQuasistatic(Direction.kReverse));
 
     // Reset field-centric heading
     joystick.leftBumper().onTrue(
         drivetrain.runOnce(drivetrain::seedFieldCentric));
 
-    joystick.rightTrigger().whileTrue(fuelSubsystem.intakeCommand());
-    joystick.leftTrigger().whileTrue(fuelSubsystem.launchCommand());
+    operator.leftBumper().whileTrue(fuelSubsystem.intakeCommand());
+    operator.rightBumper().whileTrue(fuelSubsystem.launchCommand());
 //run limelight tests
-    joystick.rightBumper().onTrue(drivetrain.runOnce(() -> autoAimSysId.start()));
+    joystick.rightTrigger().onTrue(drivetrain.runOnce(() -> autoAimSysId.start()));
 
     drivetrain.registerTelemetry(logger::telemeterize);
   }

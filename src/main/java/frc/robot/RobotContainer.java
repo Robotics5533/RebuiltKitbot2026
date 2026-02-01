@@ -2,6 +2,8 @@ package frc.robot;
 
 import static edu.wpi.first.units.Units.*;
 
+import java.util.Set;
+
 import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 import com.pathplanner.lib.auto.AutoBuilder;
@@ -12,9 +14,10 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
-import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
+import frc.robot.commands.AlignTargetOdometry;
 import frc.robot.commands.ShootLoad;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CANFuelSubsystem;
@@ -22,113 +25,93 @@ import frc.robot.subsystems.CommandSwerveDrivetrain;
 
 public class RobotContainer {
 
+    private final double MaxSpeed = 1.0 * TunerConstants.kSpeedAt12Volts.in(MetersPerSecond);
+    private final double MaxAngularRate = RotationsPerSecond.of(0.75).in(RadiansPerSecond);
 
+    private final SwerveRequest.FieldCentric drive = new SwerveRequest.FieldCentric()
+            .withDeadband(MaxSpeed * 0.1)
+            .withRotationalDeadband(MaxAngularRate * 0.1)
+            .withDriveRequestType(DriveRequestType.OpenLoopVoltage);
 
-  private final double MaxSpeed =
-      1.0 * TunerConstants.kSpeedAt12Volts.in(MetersPerSecond);
-  private final double MaxAngularRate =
-      RotationsPerSecond.of(0.75).in(RadiansPerSecond);
+    private final SwerveRequest.SwerveDriveBrake brake = new SwerveRequest.SwerveDriveBrake();
+    private final SwerveRequest.PointWheelsAt point = new SwerveRequest.PointWheelsAt();
 
-  /* Swerve requests */
-  private final SwerveRequest.FieldCentric drive =
-      new SwerveRequest.FieldCentric()
-          .withDeadband(MaxSpeed * 0.1)
-          .withRotationalDeadband(MaxAngularRate * 0.1)
-          .withDriveRequestType(DriveRequestType.OpenLoopVoltage);
+    private final Telemetry logger = new Telemetry(MaxSpeed);
 
-  private final SwerveRequest.SwerveDriveBrake brake =
-      new SwerveRequest.SwerveDriveBrake();
-  private final SwerveRequest.PointWheelsAt point =
-      new SwerveRequest.PointWheelsAt();
-  private final SwerveRequest.FieldCentric forwardStraight =
-      new SwerveRequest.FieldCentric().withDriveRequestType(
-          DriveRequestType.OpenLoopVoltage);
+    private final CommandXboxController joystick = new CommandXboxController(0);
+    private final CommandXboxController operator = new CommandXboxController(1);
 
-  private final Telemetry logger = new Telemetry(MaxSpeed);
+    public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
+    public final CANFuelSubsystem fuelSubsystem = new CANFuelSubsystem();
 
-  private final CommandXboxController joystick = new CommandXboxController(0);
-  private final CommandXboxController operator = new CommandXboxController(1);
+    private final SendableChooser<Command> autoChooser;
 
-  public final CommandSwerveDrivetrain drivetrain =
-      TunerConstants.createDrivetrain();
-  public final CANFuelSubsystem fuelSubsystem = new CANFuelSubsystem();
+    public RobotContainer() {
+        NamedCommands.registerCommand(
+                "shoot_load",
+                ShootLoad.shootForTime(fuelSubsystem, 2.0));
+        
+        autoChooser = AutoBuilder.buildAutoChooser("Tests");
+        SmartDashboard.putData("Auto Mode", autoChooser);
 
-  /* Path follower */
-  private final SendableChooser<Command> autoChooser;
+        configureBindings();
+        FollowPathCommand.warmupCommand();
+    }
 
-  public RobotContainer() {
-    NamedCommands.registerCommand(
-      "shoot_load",
-      ShootLoad.shootForTime(fuelSubsystem, 4.0)
-  );
-    autoChooser = AutoBuilder.buildAutoChooser("Tests");
-    SmartDashboard.putData("Auto Mode", autoChooser);
-    
+    private void configureBindings() {
+        drivetrain.setDefaultCommand(drivetrain.run(() -> {
+            double vx = -MathUtil.applyDeadband(joystick.getLeftY(), 0.05) * MaxSpeed;
+            double vy = -MathUtil.applyDeadband(joystick.getLeftX(), 0.05) * MaxSpeed;
+            double manualOmega = -MathUtil.applyDeadband(joystick.getRightX(), 0.05) * MaxAngularRate;
 
-    configureBindings();
+            drivetrain.setControl(
+                    drive.withVelocityX(vx)
+                            .withVelocityY(vy)
+                            .withRotationalRate(manualOmega));
+        }));
 
-    // Warmup PathPlanner to avoid Java pauses
-    FollowPathCommand.warmupCommand();
-  }
+        joystick.rightBumper().whileTrue(
+                new AlignTargetOdometry(drivetrain, drive, joystick, false));
 
-  private void configureBindings() {
-    drivetrain.setDefaultCommand(drivetrain.run(() -> {
-      double vx = -MathUtil.applyDeadband(joystick.getLeftY(), 0.05) * MaxSpeed;
-      double vy = -MathUtil.applyDeadband(joystick.getLeftX(), 0.05) * MaxSpeed;
-      double manualOmega =
-          -MathUtil.applyDeadband(joystick.getRightX(), 0.05) * MaxAngularRate;
+        joystick.leftBumper().onTrue(
+                drivetrain.runOnce(drivetrain::seedFieldCentric));
 
-      boolean autoAim = joystick.rightBumper().getAsBoolean();
+        joystick.a().whileTrue(drivetrain.applyRequest(() -> brake));
 
-      drivetrain.driveWithAutoAim(drive, vx, vy, manualOmega, autoAim);
-    }));
+        joystick.b().whileTrue(drivetrain.applyRequest(
+                () -> point.withModuleDirection(
+                        new Rotation2d(-joystick.getLeftY(), -joystick.getLeftX()))));
 
-    // Idle while robot is disabled
-    final var idle = new SwerveRequest.Idle();
-    RobotModeTriggers.disabled().whileTrue(
-        drivetrain.applyRequest(() -> idle).ignoringDisable(true));
+        final var idle = new SwerveRequest.Idle();
+        RobotModeTriggers.disabled().whileTrue(
+                drivetrain.applyRequest(() -> idle).ignoringDisable(true));
 
-    // Button bindings
-    joystick.a().whileTrue(drivetrain.applyRequest(() -> brake));
+        operator.leftBumper().whileTrue(fuelSubsystem.intakeCommand());
 
-    joystick.b().whileTrue(drivetrain.applyRequest(
-        ()
-            -> point.withModuleDirection(
-                new Rotation2d(-joystick.getLeftY(), -joystick.getLeftX()))));
+        operator.rightBumper().whileTrue(fuelSubsystem.launchCommand());
 
-    // joystick.povUp().whileTrue(drivetrain.applyRequest(
-    //     () -> forwardStraight.withVelocityX(0.5).withVelocityY(0)));
-    // joystick.povDown().whileTrue(drivetrain.applyRequest(
-    //     () -> forwardStraight.withVelocityX(-0.5).withVelocityY(0)));
-    // joystick.povLeft().whileTrue(drivetrain.applyRequest(
-    //     () -> forwardStraight.withVelocityX(0).withVelocityY(0.5)));
-    // joystick.povRight().whileTrue(drivetrain.applyRequest(
-    //     () -> forwardStraight.withVelocityX(0).withVelocityY(-0.5)));
+        operator.rightTrigger(0.5).whileTrue(Commands.defer(() -> {
+            AlignTargetOdometry align = new AlignTargetOdometry(drivetrain, drive, joystick, false);
+            return Commands.parallel(
+                    align,
+                    fuelSubsystem.spinUpCommand(),
+                    Commands.run(() -> fuelSubsystem.setTargetDistance(align.getDistanceToTarget()))
+            );
+        }, Set.of(fuelSubsystem)).withName("Aim and Spin Up"));
 
-    // SysId routines
-    // joystick.back()
-    //     .and(joystick.y())
-    //     .whileTrue(drivetrain.sysIdDynamic(Direction.kForward));
-    // joystick.back()
-    //     .and(joystick.x())
-    //     .whileTrue(drivetrain.sysIdDynamic(Direction.kReverse));
-    // joystick.start()
-    //     .and(joystick.y())
-    //     .whileTrue(drivetrain.sysIdQuasistatic(Direction.kForward));
-    // joystick.start()
-    //     .and(joystick.x())
-    //     .whileTrue(drivetrain.sysIdQuasistatic(Direction.kReverse));
+        operator.a().whileTrue(Commands.defer(() -> {
+            AlignTargetOdometry align = new AlignTargetOdometry(drivetrain, drive, joystick, false);
+            return Commands.parallel(
+                    align,
+                    fuelSubsystem.spinUpAndLaunchCommand(),
+                    Commands.run(() -> fuelSubsystem.setTargetDistance(align.getDistanceToTarget()))
+            );
+        }, Set.of(fuelSubsystem)).withName("Auto Shoot"));
 
-    // Reset field-centric heading
-    joystick.leftBumper().onTrue(
-        drivetrain.runOnce(drivetrain::seedFieldCentric));
+        drivetrain.registerTelemetry(logger::telemeterize);
+    }
 
-    operator.leftBumper().whileTrue(fuelSubsystem.intakeCommand());
-    operator.rightBumper().whileTrue(fuelSubsystem.launchCommand());
-
-
-    drivetrain.registerTelemetry(logger::telemeterize);
-  }
-
-  public Command getAutonomousCommand() { return autoChooser.getSelected(); }
+    public Command getAutonomousCommand() {
+        return autoChooser.getSelected();
+    }
 }

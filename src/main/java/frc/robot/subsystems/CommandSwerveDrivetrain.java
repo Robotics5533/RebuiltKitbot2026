@@ -27,6 +27,7 @@ import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import frc.robot.Constants;
 import frc.robot.LimelightHelpers;
 import frc.robot.generated.TunerConstants.TunerSwerveDrivetrain;
 import java.util.Optional;
@@ -44,11 +45,6 @@ public class CommandSwerveDrivetrain
   private static final double kSimLoopPeriod = 0.004; // 4 ms
   private Notifier m_simNotifier = null;
   private double m_lastSimTime;
-  private final PIDController tagPID =
-      new PIDController(Constants.KP, Constants.KI, Constants.KD);
-
-  private final SlewRateLimiter omegaLimiter =
-      new SlewRateLimiter(Constants.SLEW_RATE);
 
   /* Blue alliance sees forward as 0 degrees (toward red alliance wall) */
   private static final Rotation2d kBlueAlliancePerspectiveRotation =
@@ -145,8 +141,7 @@ public class CommandSwerveDrivetrain
   public CommandSwerveDrivetrain(SwerveDrivetrainConstants drivetrainConstants,
                                  SwerveModuleConstants<?, ?, ?>... modules) {
     super(drivetrainConstants, modules);
-    tagPID.enableContinuousInput(-180.0, 180.0);
-    tagPID.setTolerance(Constants.PID_TOLERANCE_DEG);
+
 
     if (Utils.isSimulation()) {
       startSimThread();
@@ -172,8 +167,7 @@ public class CommandSwerveDrivetrain
                                  double odometryUpdateFrequency,
                                  SwerveModuleConstants<?, ?, ?>... modules) {
     super(drivetrainConstants, odometryUpdateFrequency, modules);
-    tagPID.enableContinuousInput(-180.0, 180.0);
-    tagPID.setTolerance(Constants.PID_TOLERANCE_DEG);
+
 
     if (Utils.isSimulation()) {
       startSimThread();
@@ -210,8 +204,6 @@ public class CommandSwerveDrivetrain
                                  SwerveModuleConstants<?, ?, ?>... modules) {
     super(drivetrainConstants, odometryUpdateFrequency,
           odometryStandardDeviation, visionStandardDeviation, modules);
-    tagPID.enableContinuousInput(-180.0, 180.0);
-    tagPID.setTolerance(Constants.PID_TOLERANCE_DEG);
 
     if (Utils.isSimulation()) {
       startSimThread();
@@ -311,7 +303,7 @@ public class CommandSwerveDrivetrain
     }
   }
 
-  private boolean isValidAllianceTag(int tagId) {
+  public boolean isValidAllianceTag(int tagId) {
     Optional<Alliance> alliance = DriverStation.getAlliance();
 
     if (alliance.isEmpty()) {
@@ -319,47 +311,12 @@ public class CommandSwerveDrivetrain
     }
 
     return alliance.get() == Alliance.Red
-        ? Constants.RED_HUB_TAGS.contains(tagId)
-        : Constants.BLUE_HUB_TAGS.contains(tagId);
+        ? Constants.LimelightConstants.RED_HUB_TAGS.contains(tagId)
+        : Constants.LimelightConstants.BLUE_HUB_TAGS.contains(tagId);
   }
 
-  private double getAutoAimOmega() {
-    if (!LimelightHelpers.getTV(Constants.LIMELIGHT_NAME)) {
-      omegaLimiter.reset(0);
-      return 0.0;
-    }
 
-    int tagId = (int)LimelightHelpers.getFiducialID(Constants.LIMELIGHT_NAME);
 
-    if (!isValidAllianceTag(tagId)) {
-      omegaLimiter.reset(0);
-      return 0.0;
-    }
-
-    double tx = LimelightHelpers.getTX(Constants.LIMELIGHT_NAME);
-
-    if (Math.abs(tx) < Constants.TX_DEADBAND_DEG) {
-      return 0.0;
-    }
-
-    double omega = tagPID.calculate(tx, 0.0);
-
-    omega = MathUtil.clamp(omega, -Constants.MAX_OMEGA, Constants.MAX_OMEGA);
-
-    return omegaLimiter.calculate(omega);
-  }
-
-  public void driveWithAutoAim(SwerveRequest.FieldCentric request, double vx,
-                               double vy, double manualOmega, boolean autoAim) {
-    double omega = autoAim ? getAutoAimOmega() : manualOmega;
-
-    if (!autoAim) {
-      omegaLimiter.reset(manualOmega);
-    }
-
-    setControl(
-        request.withVelocityX(vx).withVelocityY(vy).withRotationalRate(omega));
-  }
 
   private void startSimThread() {
     m_lastSimTime = Utils.getCurrentTimeSeconds();

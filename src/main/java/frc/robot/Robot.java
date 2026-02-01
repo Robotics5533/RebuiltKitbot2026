@@ -6,12 +6,10 @@ package frc.robot;
 
 import com.ctre.phoenix6.HootAutoReplay;
 
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.TimedRobot;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
-import frc.robot.LimelightHelpers.RawFiducial;
-import frc.robot.subsystems.Constants;
 
 public class Robot extends TimedRobot {
     private Command m_autonomousCommand;
@@ -20,8 +18,8 @@ public class Robot extends TimedRobot {
 
     /* log and replay timestamp and joystick data */
     private final HootAutoReplay m_timeAndJoystickReplay = new HootAutoReplay()
-        .withTimestampReplay()
-        .withJoystickReplay();
+            .withTimestampReplay()
+            .withJoystickReplay();
 
     public Robot() {
         m_robotContainer = new RobotContainer();
@@ -31,17 +29,29 @@ public class Robot extends TimedRobot {
     public void robotPeriodic() {
         m_timeAndJoystickReplay.update();
         CommandScheduler.getInstance().run();
+        // var driveState = m_robotContainer.drivetrain.getState();
+        // double headingDeg = driveState.Pose.getRotation().getDegrees();
+        // double omegaRps = Units.radiansToRotations(driveState.Speeds.omegaRadiansPerSecond);
+
+        // LimelightHelpers.SetRobotOrientation("limelight", headingDeg, 0, 0, 0, 0, 0);
+        // var llMeasurement = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight");
+        // if (llMeasurement != null && llMeasurement.tagCount > 0 && Math.abs(omegaRps) < 2.0) {
+        //     m_robotContainer.drivetrain.addVisionMeasurement(llMeasurement.pose, llMeasurement.timestampSeconds);
+        // }
 
     }
 
     @Override
-    public void disabledInit() {}
+    public void disabledInit() {
+    }
 
     @Override
-    public void disabledPeriodic() {}
+    public void disabledPeriodic() {
+    }
 
     @Override
-    public void disabledExit() {}
+    public void disabledExit() {
+    }
 
     @Override
     public void autonomousInit() {
@@ -53,10 +63,12 @@ public class Robot extends TimedRobot {
     }
 
     @Override
-    public void autonomousPeriodic() {}
+    public void autonomousPeriodic() {
+    }
 
     @Override
-    public void autonomousExit() {}
+    public void autonomousExit() {
+    }
 
     @Override
     public void teleopInit() {
@@ -67,12 +79,11 @@ public class Robot extends TimedRobot {
 
     @Override
     public void teleopPeriodic() {
-        RawFiducial[] fiducials = LimelightHelpers.getRawFiducials(Constants.LIMELIGHT_NAME);
-SmartDashboard.putNumber("Fuel/Fiducial Count", fiducials.length);
     }
 
     @Override
-    public void teleopExit() {}
+    public void teleopExit() {
+    }
 
     @Override
     public void testInit() {
@@ -80,11 +91,14 @@ SmartDashboard.putNumber("Fuel/Fiducial Count", fiducials.length);
     }
 
     @Override
-    public void testPeriodic() {}
+    public void testPeriodic() {
+    }
 
     @Override
-    public void testExit() {}
+    public void testExit() {
+    }
 
     @Override
-    public void simulationPeriodic() {}
+    public void simulationPeriodic() {
+    }
 }

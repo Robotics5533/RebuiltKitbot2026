@@ -37,7 +37,25 @@
         {
           "type": "path",
           "data": {
-            "pathName": "Hub to Tower"
+            "pathName": "Hub to HPS"
+          }
+        },
+        {
+          "type": "wait",
+          "data": {
+            "waitTime": 1.0
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "HPS to Hub"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "shoot_load"
           }
         }
       ]

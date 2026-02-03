@@ -121,7 +121,7 @@ public class AutoAlignHub extends Command {
     double dy = hubPose.getY() - robotPose.getY();
     
     Rotation2d angleToHub = new Rotation2d(Math.atan2(dy, dx));
-    double targetDegrees = angleToHub.getDegrees() + 180;
+    double targetDegrees = angleToHub.getDegrees();
     double currentDegrees = drivetrain.getState().Pose.getRotation().getDegrees();
     
     double error = MathUtil.inputModulus(targetDegrees - currentDegrees, -180, 180);

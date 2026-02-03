@@ -2,23 +2,34 @@ package frc.robot;
 
 import static edu.wpi.first.units.Units.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 import com.pathplanner.lib.auto.AutoBuilder;
-import com.pathplanner.lib.path.PathConstraints;
 import com.pathplanner.lib.auto.NamedCommands;
 import com.pathplanner.lib.commands.FollowPathCommand;
+import com.pathplanner.lib.path.PathConstraints;
+import com.pathplanner.lib.pathfinding.Pathfinding;
+import com.pathplanner.lib.util.PPLibTelemetry;
+
+import edu.wpi.first.math.Pair;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
+
 import frc.robot.commands.AutoAlignHub;
+import frc.robot.controls.Controls;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.ShooterSubsystem;
-import frc.robot.controls.Controls;
+import frc.robot.utils.FieldPositions;
+import frc.robot.utils.MathUtil;
 
 public class RobotContainer {
 
@@ -30,9 +41,7 @@ public class RobotContainer {
             .withRotationalDeadband(MaxAngularRate * Constants.DriveConstants.DEADBAND)
             .withDriveRequestType(DriveRequestType.OpenLoopVoltage);
 
-
     private final Telemetry logger = new Telemetry(MaxSpeed);
-
     private final Controls controls = new Controls();
     private final Field2d fieldViz = new Field2d();
 
@@ -42,13 +51,13 @@ public class RobotContainer {
     private final SendableChooser<Command> autoChooser;
 
     public RobotContainer() {
+
         NamedCommands.registerCommand(
                 "shoot_load",
                 Commands.sequence(
-                    Commands.waitUntil(() -> AutoAlignHub.isAligned(drivetrain)),
-                    shooter.launchCommand()
-                ).withTimeout(2.5));
-        
+                        Commands.waitUntil(() -> AutoAlignHub.isAligned(drivetrain)),
+                        shooter.launchCommand()).withTimeout(2.5));
+
         autoChooser = AutoBuilder.buildAutoChooser("Tests");
         SmartDashboard.putData("Auto Mode", autoChooser);
         SmartDashboard.putData("Field", fieldViz);
@@ -58,16 +67,33 @@ public class RobotContainer {
     }
 
     private void configureBindings() {
+
         drivetrain.setDefaultCommand(drivetrain.run(() -> {
             drivetrain.setControl(
                     drive.withVelocityX(controls.getDriveX() * MaxSpeed)
                             .withVelocityY(controls.getDriveY() * MaxSpeed)
                             .withRotationalRate(controls.getDriveOmega() * MaxAngularRate));
+
             fieldViz.setRobotPose(drivetrain.getState().Pose);
-            fieldViz.getObject("BlueHub").setPose(frc.robot.utils.FieldPositions.getBlueHubPose());
-            fieldViz.getObject("RedHub").setPose(frc.robot.utils.FieldPositions.getRedHubPose());
-            fieldViz.getObject("BlueTowerRight").setPose(frc.robot.utils.FieldPositions.getBlueTowerRightPose());
-            fieldViz.getObject("RedTowerRight").setPose(frc.robot.utils.FieldPositions.getRedTowerRightPose());
+
+            fieldViz.getObject("BlueHub").setPose(FieldPositions.getBlueHubPose());
+            fieldViz.getObject("RedHub").setPose(FieldPositions.getRedHubPose());
+
+            fieldViz.getObject("BlueTowerRight")
+                    .setPose(FieldPositions.getBlueTowerRightPose());
+            fieldViz.getObject("RedTowerRight")
+                    .setPose(FieldPositions.getRedTowerRightPose());
+
+            fieldViz.getObject("BlueBumpLeft")
+                    .setPose(FieldPositions.getBlueBumpLeftPose());
+            fieldViz.getObject("BlueBumpRight")
+                    .setPose(FieldPositions.getBlueBumpRightPose());
+            fieldViz.getObject("RedBumpLeft")
+                    .setPose(FieldPositions.getRedBumpLeftPose());
+            fieldViz.getObject("RedBumpRight")
+                    .setPose(FieldPositions.getRedBumpRightPose());
+
+            updateDynamicObstacles();
         }));
 
         controls.configureDriver(drivetrain);
@@ -83,16 +109,43 @@ public class RobotContainer {
         drivetrain.registerTelemetry(logger::telemeterize);
     }
 
+    private void updateDynamicObstacles() {
+        List<Pair<Translation2d, Translation2d>> obstacles = new ArrayList<>();
+
+        obstacles.add(MathUtil.createBoundingBox(
+                Constants.FieldConstants.blueBumpLeftPose.getTranslation(),
+                Constants.FieldConstants.bumpWidth, Constants.FieldConstants.bumpDepth));
+
+        obstacles.add(MathUtil.createBoundingBox(
+                Constants.FieldConstants.blueBumpRightPose.getTranslation(),
+                Constants.FieldConstants.bumpWidth, Constants.FieldConstants.bumpDepth));
+
+        obstacles.add(MathUtil.createBoundingBox(
+                Constants.FieldConstants.redBumpLeftPose.getTranslation(),
+                Constants.FieldConstants.bumpWidth, Constants.FieldConstants.bumpDepth));
+
+        obstacles.add(MathUtil.createBoundingBox(
+                Constants.FieldConstants.redBumpRightPose.getTranslation(),
+                Constants.FieldConstants.bumpWidth, Constants.FieldConstants.bumpDepth));
+
+        Pathfinding.setDynamicObstacles(
+                obstacles,
+                drivetrain.getState().Pose.getTranslation());
+    }
+
     public Command pathfindToRightTower() {
+
         var target = frc.robot.utils.AllianceUtil.isRedAlliance()
-                ? frc.robot.utils.FieldPositions.getRedTowerRightPose()
-                : frc.robot.utils.FieldPositions.getBlueTowerRightPose();
+                ? FieldPositions.getRedTowerRightPose()
+                : FieldPositions.getBlueTowerRightPose();
+
         PathConstraints constraints = new PathConstraints(
                 MaxSpeed * 0.8,
                 MaxSpeed * 1.2,
                 MaxAngularRate * 0.8,
                 MaxAngularRate * 1.2);
-        return AutoBuilder.pathfindToPose(target, constraints);
+
+        return AutoBuilder.pathfindToPose(target, constraints, 0.0);
     }
 
     public Command getAutonomousCommand() {

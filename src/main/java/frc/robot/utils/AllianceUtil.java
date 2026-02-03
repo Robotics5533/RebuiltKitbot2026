@@ -75,7 +75,7 @@ public class AllianceUtil {
     double dx = hubPose.getX() - robotPose.getX();
     double dy = hubPose.getY() - robotPose.getY();
     Rotation2d angleToHub = new Rotation2d(Math.atan2(dy, dx));
-    return angleToHub.getDegrees() + 180;
+    return angleToHub.getDegrees();
   }
 
 }

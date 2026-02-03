@@ -52,7 +52,30 @@ public class AllianceUtil {
   }
 
   public static Pose2d getHubPose() {
-    return isRedAlliance() ? FieldConstants.blueHubPose : FieldConstants.redHubPose;
+    return isRedAlliance() ? FieldPositions.getRedHubPose() : FieldPositions.getBlueHubPose();
+  }
+
+  public static double getDistanceToHub(frc.robot.subsystems.CommandSwerveDrivetrain drivetrain, String limelightName) {
+    var estimate = frc.robot.utils.LimelightHelpers.getBotPoseEstimate_wpiBlue(limelightName);
+    if (estimate.tagCount > 0) {
+      return estimate.pose.getTranslation().getDistance(getHubPose().getTranslation());
+    }
+    Pose2d robotPose = drivetrain.getState().Pose;
+    return robotPose.getTranslation().getDistance(getHubPose().getTranslation());
+  }
+
+  public static double getTargetHeadingToHub(frc.robot.subsystems.CommandSwerveDrivetrain drivetrain, String limelightName) {
+    var llResults = frc.robot.utils.LimelightHelpers.getLatestResults(limelightName);
+    double currentHeading = drivetrain.getState().Pose.getRotation().getDegrees();
+    if (llResults.valid && llResults.targets_Fiducials.length > 0) {
+      return currentHeading + llResults.tx;
+    }
+    Pose2d robotPose = drivetrain.getState().Pose;
+    Pose2d hubPose = getHubPose();
+    double dx = hubPose.getX() - robotPose.getX();
+    double dy = hubPose.getY() - robotPose.getY();
+    Rotation2d angleToHub = new Rotation2d(Math.atan2(dy, dx));
+    return angleToHub.getDegrees() + 180;
   }
 
 }

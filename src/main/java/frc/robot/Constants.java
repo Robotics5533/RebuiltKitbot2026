@@ -23,14 +23,15 @@ public final class Constants {
         public static final int FEEDER_MOTOR_ID = 14;
         public static final int LAUNCHER_MOTOR_ID = 15;
 
-        public static final double INTAKING_FEEDER_RPM = 3000;
-        public static final double INTAKING_LAUNCHER_RPM = -2500;
-        public static final double IDLE_FEEDER_RPM = 1500;
+        public static final double INTAKING_FEEDER_RPM = 10000;
+        public static final double INTAKING_LAUNCHER_RPM = -12000;
+        public static final double IDLE_FEEDER_RPM = 0;
 
         public static final double LAUNCHER_kP = 0.0002;
         public static final double LAUNCHER_kI = 0.0;
         public static final double LAUNCHER_kD = 0.0;
         public static final double LAUNCHER_kFF = 0.000175;
+
 
         public static final double FEEDER_kP = 0.0001;
         public static final double FEEDER_kI = 0.0;

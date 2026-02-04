@@ -11,9 +11,28 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.Constants;
 import frc.robot.utils.LimelightHelpers;
 
+import static edu.wpi.first.units.Units.*;
+
+/**
+ * ShooterSubsystem controls the REV ION motors for fuel intake and launching.
+ * 
+ * This subsystem includes SysId characterization routines for both the launcher and feeder motors.
+ * To use SysId:
+ * 
+ * 1. Add to your RobotContainer or Controls class:
+ *    - joystick.button().whileTrue(shooter.launcherSysIdCommand(Direction.kForward));
+ *    - joystick.button().whileTrue(feederSysIdCommand(Direction.kReverse));
+ *    - joystick.button().whileTrue(shooter.launcherSysIdQuasistaticCommand(Direction.kForward));
+ *    - joystick.button().whileTrue(shooter.feederSysIdQuasistaticCommand(Direction.kReverse));
+ * 
+ * 2. Run each test once (forward and reverse for both dynamic and quasistatic)
+ * 3. Export log file and run SysId GUI tool to generate feedforward constants
+ * 4. Update Constants.ShooterConstants with generated kS, kV, kA values
+ */
 public class ShooterSubsystem extends SubsystemBase {
   private final SparkMax feederMotor;
   private final SparkMax launcherMotor;
@@ -24,10 +43,40 @@ public class ShooterSubsystem extends SubsystemBase {
   private double targetLauncherRPM = 0;
   private double targetFeederRPM = 0;
 
+  // SysId Routine instances (initialized in constructor after motors are created)
+  private SysIdRoutine launcherSysId;
+  private SysIdRoutine feederSysId;
+
   public ShooterSubsystem(CommandSwerveDrivetrain drivetrain) {
     this.drivetrain = drivetrain;
     feederMotor = createFeederMotor();
     launcherMotor = createLauncherMotor();
+    
+    // Initialize SysId routines for launcher motor characterization
+    // Uses null for log consumer since URCL automatically logs all Spark Max data
+    launcherSysId = new SysIdRoutine(
+        new SysIdRoutine.Config(
+            null,
+            null,
+            null,
+            state -> SmartDashboard.putString("Launcher SysId State", state.toString())),
+        new SysIdRoutine.Mechanism(
+            output -> setLauncherVoltage(output.in(Volts)),
+            null,  // No log consumer - URCL handles all logging
+            this));
+
+    // Initialize SysId routines for feeder motor characterization
+    // Uses null for log consumer since URCL automatically logs all Spark Max data
+    feederSysId = new SysIdRoutine(
+        new SysIdRoutine.Config(
+            null,
+            null,
+            null,
+            state -> SmartDashboard.putString("Feeder SysId State", state.toString())),
+        new SysIdRoutine.Mechanism(
+            output -> setFeederVoltage(output.in(Volts)),
+            null,  // No log consumer - URCL handles all logging
+            this));
     
     SmartDashboard.putBoolean("Shooter/Use Auto Velocity", true);
     SmartDashboard.putNumber("Shooter/Manual Launcher RPM", Constants.ShooterConstants.MANUAL_LAUNCHER_RPM);
@@ -159,5 +208,69 @@ public class ShooterSubsystem extends SubsystemBase {
         run(this::spinUp).until(this::isLauncherAtSpeed),
         run(this::launch)
     ).finallyDo(this::stop).withName("SpinUpAndShoot");
+  }
+
+  /**
+   * Sets the launcher motor voltage directly for SysId characterization.
+   * Disables closed-loop control temporarily.
+   * 
+   * @param volts The voltage to apply to the launcher motor
+   */
+  private void setLauncherVoltage(double volts) {
+    launcherMotor.setVoltage(volts);
+  }
+
+  /**
+   * Sets the feeder motor voltage directly for SysId characterization.
+   * Disables closed-loop control temporarily.
+   * 
+   * @param volts The voltage to apply to the feeder motor
+   */
+  private void setFeederVoltage(double volts) {
+    feederMotor.setVoltage(volts);
+  }
+
+  /**
+   * Returns the launcher motor SysId routine for characterization testing.
+   * Use this command to measure launcher motor parameters (kS, kV, kA).
+   * 
+   * @param direction The direction (Forward or Reverse) to run the SysId test
+   * @return The SysId command sequence for the launcher motor
+   */
+  public Command launcherSysIdCommand(SysIdRoutine.Direction direction) {
+    return launcherSysId.dynamic(direction);
+  }
+
+  /**
+   * Returns the feeder motor SysId routine for characterization testing.
+   * Use this command to measure feeder motor parameters (kS, kV, kA).
+   * 
+   * @param direction The direction (Forward or Reverse) to run the SysId test
+   * @return The SysId command sequence for the feeder motor
+   */
+  public Command feederSysIdCommand(SysIdRoutine.Direction direction) {
+    return feederSysId.dynamic(direction);
+  }
+
+  /**
+   * Returns a quasistatic SysId routine for the launcher motor.
+   * This test slowly ramps voltage and provides smoother characterization data.
+   * 
+   * @param direction The direction (Forward or Reverse) to run the SysId test
+   * @return The quasistatic SysId command sequence for the launcher motor
+   */
+  public Command launcherSysIdQuasistaticCommand(SysIdRoutine.Direction direction) {
+    return launcherSysId.quasistatic(direction);
+  }
+
+  /**
+   * Returns a quasistatic SysId routine for the feeder motor.
+   * This test slowly ramps voltage and provides smoother characterization data.
+   * 
+   * @param direction The direction (Forward or Reverse) to run the SysId test
+   * @return The quasistatic SysId command sequence for the feeder motor
+   */
+  public Command feederSysIdQuasistaticCommand(SysIdRoutine.Direction direction) {
+    return feederSysId.quasistatic(direction);
   }
 }

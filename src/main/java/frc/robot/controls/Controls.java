@@ -4,6 +4,7 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.Constants;
 import frc.robot.commands.AutoAlignHub;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
@@ -85,6 +86,16 @@ public class Controls {
                     shooter.spinUpAndShootCommand(),
                     Commands.run(() -> shooter.setTargetDistance(align.getDistanceToTarget())));
         }, Set.of(shooter)).withName("Auto Shoot"));
+
+        // SysId Controls: Start + A for launcher quasistatic test, Start + B for feeder quasistatic test
+        // Quasistatic tests slowly ramp voltage from lowest to highest, providing smoother characterization
+        operator.start().and(operator.a()).whileTrue(
+                shooter.launcherSysIdQuasistaticCommand(SysIdRoutine.Direction.kForward)
+                        .withName("Launcher SysId Quasistatic Forward"));
+
+        operator.start().and(operator.b()).whileTrue(
+                shooter.feederSysIdQuasistaticCommand(SysIdRoutine.Direction.kForward)
+                        .withName("Feeder SysId Quasistatic Forward"));
     }
 
     public CommandXboxController getDriver() {

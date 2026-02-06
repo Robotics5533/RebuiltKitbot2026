@@ -12,8 +12,6 @@ import com.pathplanner.lib.auto.NamedCommands;
 import com.pathplanner.lib.commands.FollowPathCommand;
 import com.pathplanner.lib.path.PathConstraints;
 import com.pathplanner.lib.pathfinding.Pathfinding;
-import com.pathplanner.lib.util.PPLibTelemetry;
-
 import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
@@ -22,7 +20,6 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
-
 import frc.robot.commands.AutoAlignHub;
 import frc.robot.controls.Controls;
 import frc.robot.generated.TunerConstants;
@@ -61,6 +58,14 @@ public class RobotContainer {
         autoChooser = AutoBuilder.buildAutoChooser("Tests");
         SmartDashboard.putData("Auto Mode", autoChooser);
         SmartDashboard.putData("Field", fieldViz);
+        SmartDashboard.putData(shooter.sysIdLauncherQuasistaticForward().withName("SysId Launcher Quasistatic Fwd").ignoringDisable(true));
+        SmartDashboard.putData(shooter.sysIdLauncherQuasistaticReverse().withName("SysId Launcher Quasistatic Rev").ignoringDisable(true));
+        SmartDashboard.putData(shooter.sysIdLauncherDynamicForward().withName("SysId Launcher Dynamic Fwd").ignoringDisable(true));
+        SmartDashboard.putData(shooter.sysIdLauncherDynamicReverse().withName("SysId Launcher Dynamic Rev").ignoringDisable(true));
+        SmartDashboard.putData(shooter.sysIdFeederQuasistaticForward().withName("SysId Feeder Quasistatic Fwd").ignoringDisable(true));
+        SmartDashboard.putData(shooter.sysIdFeederQuasistaticReverse().withName("SysId Feeder Quasistatic Rev").ignoringDisable(true));
+        SmartDashboard.putData(shooter.sysIdFeederDynamicForward().withName("SysId Feeder Dynamic Fwd").ignoringDisable(true));
+        SmartDashboard.putData(shooter.sysIdFeederDynamicReverse().withName("SysId Feeder Dynamic Rev").ignoringDisable(true));
 
         configureBindings();
         FollowPathCommand.warmupCommand();

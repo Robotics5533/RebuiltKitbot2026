@@ -1,5 +1,7 @@
 package frc.robot.subsystems;
 
+import static edu.wpi.first.units.Units.*;
+
 import com.revrobotics.spark.ClosedLoopSlot;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
@@ -8,9 +10,11 @@ import com.revrobotics.spark.SparkBase.ControlType;
 import com.revrobotics.PersistMode;
 import com.revrobotics.ResetMode;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.Constants;
 import frc.robot.utils.LimelightHelpers;
 
@@ -23,6 +27,9 @@ public class ShooterSubsystem extends SubsystemBase {
   private boolean useAutoVelocity = true;
   private double targetLauncherRPM = 0;
   private double targetFeederRPM = 0;
+  private boolean intakeActive = false;
+  private final SysIdRoutine launcherSysId;
+  private final SysIdRoutine feederSysId;
 
   public ShooterSubsystem(CommandSwerveDrivetrain drivetrain) {
     this.drivetrain = drivetrain;
@@ -31,6 +38,31 @@ public class ShooterSubsystem extends SubsystemBase {
     
     SmartDashboard.putBoolean("Shooter/Use Auto Velocity", true);
     SmartDashboard.putNumber("Shooter/Manual Launcher RPM", Constants.ShooterConstants.MANUAL_LAUNCHER_RPM);
+
+    launcherSysId = new SysIdRoutine(
+        new SysIdRoutine.Config(Volts.of(1).per(Second), Volts.of(7), Seconds.of(10)),
+        new SysIdRoutine.Mechanism(
+            v -> launcherMotor.setVoltage(v.in(Volts)),
+            log -> {
+              log.motor("launcher")
+                  .voltage(Volts.of(launcherMotor.getAppliedOutput() * RobotController.getBatteryVoltage()))
+                  .angularPosition(Rotations.of(launcherMotor.getEncoder().getPosition()))
+                  .angularVelocity(RotationsPerSecond.of(launcherMotor.getEncoder().getVelocity() / 60.0));
+            },
+            this,
+            "ShooterLauncher"));
+    feederSysId = new SysIdRoutine(
+        new SysIdRoutine.Config(Volts.of(1).per(Second), Volts.of(7), Seconds.of(10)),
+        new SysIdRoutine.Mechanism(
+            v -> feederMotor.setVoltage(v.in(Volts)),
+            log -> {
+              log.motor("feeder")
+                  .voltage(Volts.of(feederMotor.getAppliedOutput() * RobotController.getBatteryVoltage()))
+                  .angularPosition(Rotations.of(feederMotor.getEncoder().getPosition()))
+                  .angularVelocity(RotationsPerSecond.of(feederMotor.getEncoder().getVelocity() / 60.0));
+            },
+            this,
+            "ShooterFeeder"));
   }
 
   private SparkMax createFeederMotor() {
@@ -84,6 +116,7 @@ public class ShooterSubsystem extends SubsystemBase {
 
   public void intake() {
     setVelocities(Constants.ShooterConstants.INTAKING_FEEDER_RPM, Constants.ShooterConstants.INTAKING_LAUNCHER_RPM);
+    intakeActive = true;
   }
 
   public void spinUp() {
@@ -98,6 +131,7 @@ public class ShooterSubsystem extends SubsystemBase {
 
   public void stop() {
     setVelocities(0, 0);
+    intakeActive = false;
   }
 
   public void setTargetDistance(Double distanceMeters) {
@@ -159,5 +193,41 @@ public class ShooterSubsystem extends SubsystemBase {
         run(this::spinUp).until(this::isLauncherAtSpeed),
         run(this::launch)
     ).finallyDo(this::stop).withName("SpinUpAndShoot");
+  }
+
+  public boolean isIntaking() {
+    return intakeActive;
+  }
+
+  public Command sysIdLauncherQuasistaticForward() {
+    return launcherSysId.quasistatic(SysIdRoutine.Direction.kForward);
+  }
+
+  public Command sysIdLauncherQuasistaticReverse() {
+    return launcherSysId.quasistatic(SysIdRoutine.Direction.kReverse);
+  }
+
+  public Command sysIdLauncherDynamicForward() {
+    return launcherSysId.dynamic(SysIdRoutine.Direction.kForward);
+  }
+
+  public Command sysIdLauncherDynamicReverse() {
+    return launcherSysId.dynamic(SysIdRoutine.Direction.kReverse);
+  }
+
+  public Command sysIdFeederQuasistaticForward() {
+    return feederSysId.quasistatic(SysIdRoutine.Direction.kForward);
+  }
+
+  public Command sysIdFeederQuasistaticReverse() {
+    return feederSysId.quasistatic(SysIdRoutine.Direction.kReverse);
+  }
+
+  public Command sysIdFeederDynamicForward() {
+    return feederSysId.dynamic(SysIdRoutine.Direction.kForward);
+  }
+
+  public Command sysIdFeederDynamicReverse() {
+    return feederSysId.dynamic(SysIdRoutine.Direction.kReverse);
   }
 }

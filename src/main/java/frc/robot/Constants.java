@@ -27,19 +27,16 @@ public final class Constants {
         public static final double INTAKING_LAUNCHER_RPM = -2500;
         public static final double IDLE_FEEDER_RPM = 1500;
 
-        public static final double LAUNCHER_kP = 0.0002; // TODO: Retune for voltage control if needed
+        public static final double LAUNCHER_kP = 0.0005; 
         public static final double LAUNCHER_kI = 0.0;
         public static final double LAUNCHER_kD = 0.0;
-        public static final double LAUNCHER_kS = 0.15;
-        public static final double LAUNCHER_kV = 0.0021;
-        public static final double LAUNCHER_kA = 0.0;
+        // kV = 1.0 / FreeSpeed (approx 5700 for NEO) -> ~0.000175
+        public static final double LAUNCHER_kV = 0.000175; 
 
-        public static final double FEEDER_kP = 0.0001; // TODO: Retune for voltage control if needed
+        public static final double FEEDER_kP = 0.0005; 
         public static final double FEEDER_kI = 0.0;
         public static final double FEEDER_kD = 0.0;
-        public static final double FEEDER_kS = 0.15;
-        public static final double FEEDER_kV = 0.0021;
-        public static final double FEEDER_kA = 0.0;
+        public static final double FEEDER_kV = 0.000175;
 
         public static final double VELOCITY_TOLERANCE_RPM = 100;
         public static final double MANUAL_LAUNCHER_RPM = 4000;
@@ -63,9 +60,9 @@ public final class Constants {
 
     public static final class DriveConstants {
         public static final double DEADBAND = 0.05;
-        public static final double ALIGN_PID_P = 0.025;
+        public static final double ALIGN_PID_P = 0.015;
         public static final double ALIGN_PID_I = 0.0;
-        public static final double ALIGN_PID_D = 0.008;
+        public static final double ALIGN_PID_D = 0.012;
         public static final double ALIGN_TOLERANCE_DEG = 2.0;
         public static final double ALIGN_ROTATION_LIMIT = 4.0;
     }

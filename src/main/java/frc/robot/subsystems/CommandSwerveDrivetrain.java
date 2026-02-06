@@ -188,6 +188,14 @@ public class CommandSwerveDrivetrain
         m_hasAppliedOperatorPerspective = true;
       });
     }
+    
+    // Seed field relative once when alliance is present to ensure Gyro is correct for Odometry/Vision
+    if (!m_hasSeededFieldRelative) {
+         DriverStation.getAlliance().ifPresent(alliance -> {
+             seedFieldRelative();
+             m_hasSeededFieldRelative = true;
+         });
+    }
   }
 
   public boolean isValidAllianceTag(int tagId) {
@@ -202,7 +210,9 @@ public class CommandSwerveDrivetrain
         : Constants.LimelightConstants.BLUE_HUB_TAGS.contains(tagId);
   }
 
-  private void startSimThread() {
+  private boolean m_hasSeededFieldRelative = false;
+
+    private void startSimThread() {
     m_lastSimTime = Utils.getCurrentTimeSeconds();
 
     /* Run simulation at a faster rate so PID gains behave more reasonably */
@@ -217,8 +227,17 @@ public class CommandSwerveDrivetrain
     m_simNotifier.startPeriodic(kSimLoopPeriod);
   }
 
-  /**
-   * Adds a vision measurement to the Kalman Filter. This will correct the
+  public void seedFieldRelative() {
+        var alliance = DriverStation.getAlliance().orElse(Alliance.Blue);
+        if (alliance == Alliance.Red) {
+            this.getPigeon2().setYaw(180);
+        } else {
+            this.getPigeon2().setYaw(0);
+        }
+    }
+
+    /**
+     * Adds a vision measurement to the Kalman Filter. This will correct the
    * odometry pose estimate while still accounting for measurement noise.
    *
    * @param visionRobotPoseMeters The pose of the robot as measured by the

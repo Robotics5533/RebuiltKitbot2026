@@ -44,8 +44,8 @@ public class RobotContainer {
     private final Field2d fieldViz = new Field2d();
 
     public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
-    public final LimelightSubsystem limelight = new LimelightSubsystem(drivetrain);
-    public final ShooterSubsystem shooter = new ShooterSubsystem(drivetrain);
+    public final LimelightSubsystem limelight = new LimelightSubsystem(Constants.LimelightConstants.LIMELIGHT_NAME);
+    public final ShooterSubsystem shooter = new ShooterSubsystem();
 
     private final SendableChooser<Command> autoChooser;
 
@@ -60,14 +60,6 @@ public class RobotContainer {
         autoChooser = AutoBuilder.buildAutoChooser("Tests");
         SmartDashboard.putData("Auto Mode", autoChooser);
         SmartDashboard.putData("Field", fieldViz);
-        SmartDashboard.putData(shooter.sysIdLauncherQuasistaticForward().withName("SysId Launcher Quasistatic Fwd").ignoringDisable(true));
-        SmartDashboard.putData(shooter.sysIdLauncherQuasistaticReverse().withName("SysId Launcher Quasistatic Rev").ignoringDisable(true));
-        SmartDashboard.putData(shooter.sysIdLauncherDynamicForward().withName("SysId Launcher Dynamic Fwd").ignoringDisable(true));
-        SmartDashboard.putData(shooter.sysIdLauncherDynamicReverse().withName("SysId Launcher Dynamic Rev").ignoringDisable(true));
-        SmartDashboard.putData(shooter.sysIdFeederQuasistaticForward().withName("SysId Feeder Quasistatic Fwd").ignoringDisable(true));
-        SmartDashboard.putData(shooter.sysIdFeederQuasistaticReverse().withName("SysId Feeder Quasistatic Rev").ignoringDisable(true));
-        SmartDashboard.putData(shooter.sysIdFeederDynamicForward().withName("SysId Feeder Dynamic Fwd").ignoringDisable(true));
-        SmartDashboard.putData(shooter.sysIdFeederDynamicReverse().withName("SysId Feeder Dynamic Rev").ignoringDisable(true));
 
         configureBindings();
         FollowPathCommand.warmupCommand();
@@ -76,11 +68,21 @@ public class RobotContainer {
     private void configureBindings() {
 
         drivetrain.setDefaultCommand(drivetrain.run(() -> {
+            // Drive
             drivetrain.setControl(
                     drive.withVelocityX(controls.getDriveX() * MaxSpeed)
                             .withVelocityY(controls.getDriveY() * MaxSpeed)
                             .withRotationalRate(controls.getDriveOmega() * MaxAngularRate));
 
+            // Vision Update
+            var measurement = limelight.getMeasurement(drivetrain.getState().Pose);
+            if (measurement.isPresent()) {
+                var m = measurement.get();
+                drivetrain.setVisionMeasurementStdDevs(m.standardDeviations);
+                drivetrain.addVisionMeasurement(m.poseEstimate.pose, m.poseEstimate.timestampSeconds);
+            }
+
+            // Viz
             fieldViz.setRobotPose(drivetrain.getState().Pose);
 
             fieldViz.getObject("BlueHub").setPose(FieldPositions.getBlueHubPose());
@@ -142,9 +144,8 @@ public class RobotContainer {
 
     public Command pathfindToRightTower() {
 
-        var target = frc.robot.utils.AllianceUtil.isRedAlliance()
-                ? FieldPositions.getRedTowerRightPose()
-                : FieldPositions.getBlueTowerRightPose();
+        // AutoBuilder flips the target for Red alliance, so we always pass the Blue pose
+        var target = FieldPositions.getBlueTowerRightPose();
 
         PathConstraints constraints = new PathConstraints(
                 MaxSpeed * 0.8,

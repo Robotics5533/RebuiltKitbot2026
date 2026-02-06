@@ -40,7 +40,7 @@ public class Controls {
                 new AutoAlignHub(drivetrain, limelight, driver));
 
         driver.leftBumper().onTrue(
-                drivetrain.runOnce(drivetrain::seedFieldCentric));
+                drivetrain.runOnce(drivetrain::seedFieldRelative));
 
         driver.a().whileTrue(
                 drivetrain.applyRequest(() -> new com.ctre.phoenix6.swerve.SwerveRequest.SwerveDriveBrake()));

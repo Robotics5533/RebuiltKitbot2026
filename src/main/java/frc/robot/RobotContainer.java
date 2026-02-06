@@ -24,6 +24,7 @@ import frc.robot.commands.AutoAlignHub;
 import frc.robot.controls.Controls;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
+import frc.robot.subsystems.LimelightSubsystem;
 import frc.robot.subsystems.ShooterSubsystem;
 import frc.robot.utils.FieldPositions;
 import frc.robot.utils.MathUtil;
@@ -43,6 +44,7 @@ public class RobotContainer {
     private final Field2d fieldViz = new Field2d();
 
     public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
+    public final LimelightSubsystem limelight = new LimelightSubsystem(drivetrain);
     public final ShooterSubsystem shooter = new ShooterSubsystem(drivetrain);
 
     private final SendableChooser<Command> autoChooser;
@@ -101,9 +103,9 @@ public class RobotContainer {
             updateDynamicObstacles();
         }));
 
-        controls.configureDriver(drivetrain);
-        controls.configureDriverWithShooter(shooter, drivetrain);
-        controls.configureOperator(shooter, drivetrain);
+        controls.configureDriver(drivetrain, limelight);
+        controls.configureDriverWithShooter(shooter, drivetrain, limelight);
+        controls.configureOperator(shooter, drivetrain, limelight);
 
         controls.getDriver().y().onTrue(pathfindToRightTower());
 

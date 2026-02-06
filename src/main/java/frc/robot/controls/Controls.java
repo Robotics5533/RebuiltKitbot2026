@@ -7,6 +7,7 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.Constants;
 import frc.robot.commands.AutoAlignHub;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
+import frc.robot.subsystems.LimelightSubsystem;
 import frc.robot.subsystems.ShooterSubsystem;
 
 import java.util.Set;
@@ -34,9 +35,9 @@ public class Controls {
     }
 
     // Driver Bindings
-    public void configureDriver(CommandSwerveDrivetrain drivetrain) {
+    public void configureDriver(CommandSwerveDrivetrain drivetrain, LimelightSubsystem limelight) {
         driver.rightBumper().whileTrue(
-                new AutoAlignHub(drivetrain, driver));
+                new AutoAlignHub(drivetrain, limelight, driver));
 
         driver.leftBumper().onTrue(
                 drivetrain.runOnce(drivetrain::seedFieldCentric));
@@ -49,9 +50,9 @@ public class Controls {
                         new Rotation2d(-driver.getLeftY(), -driver.getLeftX()))));
     }
 
-    public void configureDriverWithShooter(ShooterSubsystem shooter, CommandSwerveDrivetrain drivetrain) {
+    public void configureDriverWithShooter(ShooterSubsystem shooter, CommandSwerveDrivetrain drivetrain, LimelightSubsystem limelight) {
         driver.rightTrigger(Constants.OperatorConstants.TRIGGER_THRESHOLD).whileTrue(Commands.defer(() -> {
-            var align = new AutoAlignHub(drivetrain, driver);
+            var align = new AutoAlignHub(drivetrain, limelight, driver);
             return Commands.parallel(
                     align,
                     Commands.sequence(
@@ -62,12 +63,12 @@ public class Controls {
     }
 
     // Operator Bindings
-    public void configureOperator(ShooterSubsystem shooter, CommandSwerveDrivetrain drivetrain) {
+    public void configureOperator(ShooterSubsystem shooter, CommandSwerveDrivetrain drivetrain, LimelightSubsystem limelight) {
         operator.leftBumper().whileTrue(shooter.intakeCommand());
         operator.rightBumper().whileTrue(shooter.launchCommand());
 
         operator.rightTrigger(Constants.OperatorConstants.TRIGGER_THRESHOLD).whileTrue(Commands.defer(() -> {
-            var align = new AutoAlignHub(drivetrain, driver);
+            var align = new AutoAlignHub(drivetrain, limelight, driver);
             return Commands.parallel(
                     align,
                     Commands.sequence(
@@ -76,10 +77,10 @@ public class Controls {
                     Commands.run(() -> shooter.setTargetDistance(align.getDistanceToTarget())));
         }, Set.of(shooter)).withName("Align and Shoot"));
 
-        operator.y().whileTrue(new AutoAlignHub(drivetrain, driver));
+        operator.y().whileTrue(new AutoAlignHub(drivetrain, limelight, driver));
 
         operator.a().whileTrue(Commands.defer(() -> {
-            var align = new AutoAlignHub(drivetrain, driver);
+            var align = new AutoAlignHub(drivetrain, limelight, driver);
             return Commands.parallel(
                     align,
                     shooter.spinUpAndShootCommand(),

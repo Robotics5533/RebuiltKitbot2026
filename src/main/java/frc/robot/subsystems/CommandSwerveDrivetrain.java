@@ -188,31 +188,6 @@ public class CommandSwerveDrivetrain
         m_hasAppliedOperatorPerspective = true;
       });
     }
-
-    updateVisionMeasurement();
-  }
-
-  private void updateVisionMeasurement() {
-    var visionEst = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight");
-
-    if (visionEst.tagCount > 0) {
-      double xyStdDev = 0.7;
-      double degStdDev = 0.7;
-
-      // If we have multiple tags, we can trust the estimate much more
-      if (visionEst.tagCount >= 2) {
-        xyStdDev = 0.1;
-        degStdDev = 0.1;
-      }
-      // If we only have 1 tag, trust it if it's close
-      else if (visionEst.avgTagDist < 4.0) {
-        xyStdDev = 0.3;
-        degStdDev = 0.3;
-      }
-
-      setVisionMeasurementStdDevs(VecBuilder.fill(xyStdDev, xyStdDev, degStdDev));
-      addVisionMeasurement(visionEst.pose, visionEst.timestampSeconds);
-    }
   }
 
   public boolean isValidAllianceTag(int tagId) {

@@ -9,6 +9,7 @@ import com.revrobotics.spark.config.SparkMaxConfig;
 import com.revrobotics.spark.SparkBase.ControlType;
 import com.revrobotics.PersistMode;
 import com.revrobotics.ResetMode;
+import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -23,6 +24,9 @@ public class ShooterSubsystem extends SubsystemBase {
   private final SparkMax launcherMotor;
   private final CommandSwerveDrivetrain drivetrain;
   
+  private final SimpleMotorFeedforward launcherFF;
+  private final SimpleMotorFeedforward feederFF;
+
   private Double overrideDistanceMeters = null;
   private boolean useAutoVelocity = true;
   private double targetLauncherRPM = 0;
@@ -36,6 +40,9 @@ public class ShooterSubsystem extends SubsystemBase {
     feederMotor = createFeederMotor();
     launcherMotor = createLauncherMotor();
     
+    launcherFF = new SimpleMotorFeedforward(Constants.ShooterConstants.LAUNCHER_kS, Constants.ShooterConstants.LAUNCHER_kV, Constants.ShooterConstants.LAUNCHER_kA);
+    feederFF = new SimpleMotorFeedforward(Constants.ShooterConstants.FEEDER_kS, Constants.ShooterConstants.FEEDER_kV, Constants.ShooterConstants.FEEDER_kA);
+
     SmartDashboard.putBoolean("Shooter/Use Auto Velocity", true);
     SmartDashboard.putNumber("Shooter/Manual Launcher RPM", Constants.ShooterConstants.MANUAL_LAUNCHER_RPM);
 
@@ -69,10 +76,7 @@ public class ShooterSubsystem extends SubsystemBase {
     var motor = new SparkMax(Constants.ShooterConstants.FEEDER_MOTOR_ID, MotorType.kBrushless);
     var config = new SparkMaxConfig();
     
-    config.closedLoop
-        .pid(Constants.ShooterConstants.FEEDER_kP, Constants.ShooterConstants.FEEDER_kI, Constants.ShooterConstants.FEEDER_kD, ClosedLoopSlot.kSlot0);
-    config.closedLoop.feedForward.kV(Constants.ShooterConstants.FEEDER_kFF);
-    
+    // RIO-side control, so no SparkMax PID/FF config needed here
     config.smartCurrentLimit(Constants.ShooterConstants.FEEDER_CURRENT_LIMIT);
     
     motor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
@@ -85,10 +89,7 @@ public class ShooterSubsystem extends SubsystemBase {
     
     config.inverted(true);
     
-    config.closedLoop
-        .pid(Constants.ShooterConstants.LAUNCHER_kP, Constants.ShooterConstants.LAUNCHER_kI, Constants.ShooterConstants.LAUNCHER_kD, ClosedLoopSlot.kSlot0);
-    config.closedLoop.feedForward.kV(Constants.ShooterConstants.LAUNCHER_kFF);
-    
+    // RIO-side control, so no SparkMax PID/FF config needed here
     config.smartCurrentLimit(Constants.ShooterConstants.LAUNCHER_CURRENT_LIMIT);
     
     motor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
@@ -99,19 +100,34 @@ public class ShooterSubsystem extends SubsystemBase {
   public void periodic() {
     useAutoVelocity = SmartDashboard.getBoolean("Shooter/Use Auto Velocity", true);
     
-    SmartDashboard.putNumber("Shooter/Launcher RPM", launcherMotor.getEncoder().getVelocity());
-    SmartDashboard.putNumber("Shooter/Feeder RPM", feederMotor.getEncoder().getVelocity());
+    double currentLauncherRPM = launcherMotor.getEncoder().getVelocity();
+    double currentFeederRPM = feederMotor.getEncoder().getVelocity();
+
+    SmartDashboard.putNumber("Shooter/Launcher RPM", currentLauncherRPM);
+    SmartDashboard.putNumber("Shooter/Feeder RPM", currentFeederRPM);
     SmartDashboard.putNumber("Shooter/Target Launcher RPM", targetLauncherRPM);
     SmartDashboard.putNumber("Shooter/Target Feeder RPM", targetFeederRPM);
     SmartDashboard.putBoolean("Shooter/Launcher At Speed", isLauncherAtSpeed());
+
+    // Voltage Control Loop
+    if (Math.abs(targetLauncherRPM) < 1.0) {
+      launcherMotor.setVoltage(0);
+    } else {
+      double launcherVolts = launcherFF.calculate(targetLauncherRPM);
+      launcherMotor.setVoltage(launcherVolts);
+    }
+
+    if (Math.abs(targetFeederRPM) < 1.0) {
+      feederMotor.setVoltage(0);
+    } else {
+      double feederVolts = feederFF.calculate(targetFeederRPM);
+      feederMotor.setVoltage(feederVolts);
+    }
   }
 
   private void setVelocities(double feederRPM, double launcherRPM) {
     targetFeederRPM = feederRPM;
     targetLauncherRPM = launcherRPM;
-    
-    feederMotor.getClosedLoopController().setSetpoint(feederRPM, ControlType.kVelocity, ClosedLoopSlot.kSlot0, 0);
-    launcherMotor.getClosedLoopController().setSetpoint(launcherRPM, ControlType.kVelocity, ClosedLoopSlot.kSlot0, 0);
   }
 
   public void intake() {

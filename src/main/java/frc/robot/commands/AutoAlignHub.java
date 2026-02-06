@@ -17,10 +17,12 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.Constants;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
+import frc.robot.subsystems.LimelightSubsystem;
 import frc.robot.utils.AllianceUtil;
 
 public class AutoAlignHub extends Command {
   private final CommandSwerveDrivetrain drivetrain;
+  private final LimelightSubsystem limelight;
   private final CommandXboxController controller;
   private final SwerveRequest.FieldCentric driveRequest;
 
@@ -34,22 +36,21 @@ public class AutoAlignHub extends Command {
   private final double maxAngularRate = RotationsPerSecond.of(0.75).in(RadiansPerSecond);
   
   private double distanceToTarget = Double.NaN;
-  private String limelightName;
-
   private boolean finishAtSetpoint = false;
 
   public AutoAlignHub(
       CommandSwerveDrivetrain drivetrain,
+      LimelightSubsystem limelight,
       CommandXboxController controller) {
     this.drivetrain = drivetrain;
+    this.limelight = limelight;
     this.controller = controller;
-    this.limelightName = Constants.LimelightConstants.LIMELIGHT_NAME;
     this.driveRequest = new SwerveRequest.FieldCentric()
         .withDeadband(maxSpeed * 0.1)
         .withRotationalDeadband(maxAngularRate * 0.1)
         .withDriveRequestType(DriveRequestType.OpenLoopVoltage);
     
-    addRequirements(drivetrain);
+    addRequirements(drivetrain); // Limelight is read-only here, don't strictly need to require it, but good practice if we changed pipelines.
   }
 
   public AutoAlignHub finishWhenAligned() {
@@ -68,15 +69,34 @@ public class AutoAlignHub extends Command {
 
   @Override
   public void execute() {
-    distanceToTarget = AllianceUtil.getDistanceToHub(drivetrain, limelightName);
-    double targetAngle = AllianceUtil.getTargetHeadingToHub(drivetrain, limelightName);
+    // 1. Calculate Distance (Trust Odometry as it's updated by MegaTag2)
+    Pose2d robotPose = drivetrain.getState().Pose;
+    Pose2d hubPose = AllianceUtil.getHubPose();
+    distanceToTarget = robotPose.getTranslation().getDistance(hubPose.getTranslation());
 
-    double currentHeading = drivetrain.getState().Pose.getRotation().getDegrees();
+    // 2. Calculate Target Angle
+    double currentHeading = robotPose.getRotation().getDegrees();
+    double targetAngle;
+
+    if (limelight.hasTarget()) {
+      // Use Vision for Heading (Fast & Accurate)
+      // tx is positive to the right. To face right, we turn CW (negative).
+      // Target = Current - tx
+      targetAngle = currentHeading - limelight.getTx();
+    } else {
+      // Use Odometry for Heading (Fallback)
+      double dx = hubPose.getX() - robotPose.getX();
+      double dy = hubPose.getY() - robotPose.getY();
+      targetAngle = Math.toDegrees(Math.atan2(dy, dx));
+    }
+
+    // 3. Calculate PID
     double pidOutput = alignPID.calculate(currentHeading, targetAngle);
     
     double rotationRate = rotationLimiter.calculate(pidOutput * maxAngularRate);
     rotationRate = MathUtil.clamp(rotationRate, -maxAngularRate, maxAngularRate);
 
+    // 4. Drive
     drivetrain.setControl(driveRequest
         .withVelocityX(-controller.getLeftY() * maxSpeed)
         .withVelocityY(-controller.getLeftX() * maxSpeed)
@@ -98,21 +118,14 @@ public class AutoAlignHub extends Command {
   }
 
   public double getDistanceToTarget() {
-    return AllianceUtil.getDistanceToHub(drivetrain, limelightName);
+    return distanceToTarget;
   }
-
-  public double getLimelightDistance() {
-    var estimate = frc.robot.utils.LimelightHelpers.getBotPoseEstimate_wpiBlue(limelightName);
-    if (estimate.tagCount > 0) {
-      return estimate.pose.getTranslation().getDistance(AllianceUtil.getHubPose().getTranslation());
-    }
-    return Double.NaN;
-  }
-
+  
   public boolean isAligned() {
     return alignPID.atSetpoint();
   }
 
+  // Static helper for other commands to check alignment without an instance
   public static boolean isAligned(CommandSwerveDrivetrain drivetrain) {
     Pose2d robotPose = drivetrain.getState().Pose;
     Pose2d hubPose = AllianceUtil.getHubPose();
@@ -125,6 +138,6 @@ public class AutoAlignHub extends Command {
     double currentDegrees = drivetrain.getState().Pose.getRotation().getDegrees();
     
     double error = MathUtil.inputModulus(targetDegrees - currentDegrees, -180, 180);
-    return Math.abs(error) < 2.0;
+    return Math.abs(error) < Constants.DriveConstants.ALIGN_TOLERANCE_DEG;
   }
 }

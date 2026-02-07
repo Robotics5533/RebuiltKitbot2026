@@ -23,38 +23,21 @@ public final class Constants {
         public static final int FEEDER_MOTOR_ID = 14;
         public static final int LAUNCHER_MOTOR_ID = 15;
 
-        public static final double INTAKING_FEEDER_RPM = 3000;
-        public static final double INTAKING_LAUNCHER_RPM = -2500;
-        public static final double IDLE_FEEDER_RPM = 1500;
-
-        public static final double LAUNCHER_kP = 0.0005; 
-        public static final double LAUNCHER_kI = 0.0;
-        public static final double LAUNCHER_kD = 0.0;
-        // kV = 1.0 / FreeSpeed (approx 5700 for NEO) -> ~0.000175
-        public static final double LAUNCHER_kV = 0.000175; 
-
-        public static final double FEEDER_kP = 0.0005; 
-        public static final double FEEDER_kI = 0.0;
-        public static final double FEEDER_kD = 0.0;
-        public static final double FEEDER_kV = 0.000175;
-
-        public static final double VELOCITY_TOLERANCE_RPM = 100;
-        public static final double MANUAL_LAUNCHER_RPM = 4000;
+        public static final double INTAKING_FEEDER_VOLTS = 6.0;
+        public static final double INTAKING_LAUNCHER_VOLTS = -5.0;
+        public static final double IDLE_FEEDER_VOLTS = 3.0;
+        public static final double MANUAL_LAUNCHER_VOLTS = 8.0;
 
         public static final int FEEDER_CURRENT_LIMIT = 30;
         public static final int LAUNCHER_CURRENT_LIMIT = 40;
 
-        public static final InterpolatingDoubleTreeMap FuelVelocity = new InterpolatingDoubleTreeMap();
+        public static final InterpolatingDoubleTreeMap FuelVolts = new InterpolatingDoubleTreeMap();
         static {
-            FuelVelocity.put(1.0, 2500.0);
-            FuelVelocity.put(1.5, 2900.0);
-            FuelVelocity.put(2.0, 3200.0);
-            FuelVelocity.put(2.5, 3500.0);
-            FuelVelocity.put(3.0, 3800.0);
-            FuelVelocity.put(3.5, 4100.0);
-            FuelVelocity.put(4.0, 4300.0);
-            FuelVelocity.put(4.5, 4500.0);
-            FuelVelocity.put(5.0, 4700.0);
+            FuelVolts.put(1.0, 5.0);
+            FuelVolts.put(2.0, 6.5);
+            FuelVolts.put(3.0, 8.0);
+            FuelVolts.put(4.0, 9.5);
+            FuelVolts.put(5.0, 11.0);
         }
     }
 

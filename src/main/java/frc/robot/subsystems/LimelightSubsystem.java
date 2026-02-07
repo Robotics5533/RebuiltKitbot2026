@@ -26,46 +26,38 @@ public class LimelightSubsystem extends SubsystemBase {
     }
 
     public Optional<Measurement> getMeasurement(Pose2d currentRobotPose) {
-        // Use the current robot pose (odometry) to seed the MegaTag2 algorithm
+        // Seed MegaTag2 with current odometry rotation to avoid flipping
         LimelightHelpers.SetRobotOrientation(name, currentRobotPose.getRotation().getDegrees(), 0, 0, 0, 0, 0);
 
-        final PoseEstimate poseEstimate_MegaTag1 = LimelightHelpers.getBotPoseEstimate_wpiBlue(name);
-        final PoseEstimate poseEstimate_MegaTag2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2(name);
+        // We use MegaTag2 for stability, as it uses the Gyro to resolve ambiguity
+        PoseEstimate poseEstimate = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2(name);
         
-        if (
-            poseEstimate_MegaTag1 == null 
-                || poseEstimate_MegaTag2 == null 
-                || poseEstimate_MegaTag1.tagCount == 0 
-                || poseEstimate_MegaTag2.tagCount == 0
-        ) {
+        if (poseEstimate == null || poseEstimate.tagCount == 0) {
             return Optional.empty();
         }
 
-        // Combine the readings from MegaTag1 and MegaTag2:
-        // 1. Use the more stable position from MegaTag2
-        // 2. Use the rotation from MegaTag1 (with low confidence) to counteract gyro drift,
-        //    but ONLY if we have multiple tags to avoid ambiguity flips.
-        
-        Pose2d finalPose = poseEstimate_MegaTag2.pose;
-        
-        // Only use MegaTag1 rotation if we have high confidence (multiple tags)
-        if (poseEstimate_MegaTag1.tagCount >= 2) {
-             finalPose = new Pose2d(
-                poseEstimate_MegaTag2.pose.getTranslation(),
-                poseEstimate_MegaTag1.pose.getRotation()
-            );
+        // Dynamic Standard Deviations based on Tag Count and Distance
+        double xyStDev = 0.1; // Baseline: Trust vision for XY
+        double degStDev = 999.0; // Baseline: Trust Gyro for Theta (ignore vision rotation)
+
+        // If we have multiple tags, we can trust vision rotation slightly to correct long-term drift
+        if (poseEstimate.tagCount >= 2) {
+            degStDev = 5.0; 
         }
-
-        poseEstimate_MegaTag2.pose = finalPose;
         
-        // Trust vision for X/Y (0.1m) but trust it less for rotation (10.0 deg/rad) to let Gyro dominate
-        // MegaTag2 uses the Gyro for orientation, so we don't want to double-update rotation strongly 
-        // unless we want to drift-correct the gyro using MT1.
-        final Matrix<N3, N1> standardDeviations = VecBuilder.fill(0.1, 0.1, 10.0);
+        // Penalize distant tags
+        if (poseEstimate.avgTagDist > 3.0) {
+            xyStDev *= (poseEstimate.avgTagDist / 3.0);
+        }
+        
+        // Reject if ambiguity is too high (only relevant if using raw fiducials, but MT2 handles this internally)
+        // However, if we have 1 tag and it's far away, MT2 is still reliant on good Gyro.
+        
+        final Matrix<N3, N1> standardDeviations = VecBuilder.fill(xyStDev, xyStDev, degStDev);
 
-        posePublisher.set(poseEstimate_MegaTag2.pose);
+        posePublisher.set(poseEstimate.pose);
 
-        return Optional.of(new Measurement(poseEstimate_MegaTag2, standardDeviations));
+        return Optional.of(new Measurement(poseEstimate, standardDeviations));
     }
 
     public static class Measurement {
@@ -82,7 +74,6 @@ public class LimelightSubsystem extends SubsystemBase {
         return name;
     }
     
-    // Helper methods for other commands
     public boolean hasTarget() {
         return LimelightHelpers.getTV(name);
     }

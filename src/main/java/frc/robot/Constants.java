@@ -31,23 +31,32 @@ public final class Constants {
         public static final int FEEDER_CURRENT_LIMIT = 30;
         public static final int LAUNCHER_CURRENT_LIMIT = 40;
 
+        public static final double[] SHOOTING_DISTANCES = {1.0, 2.0, 3.0, 4.0, 5.0};
         public static final InterpolatingDoubleTreeMap FuelVolts = new InterpolatingDoubleTreeMap();
         static {
-            FuelVolts.put(1.0, 5.0);
-            FuelVolts.put(2.0, 6.5);
-            FuelVolts.put(3.0, 8.0);
-            FuelVolts.put(4.0, 9.5);
-            FuelVolts.put(5.0, 11.0);
+            FuelVolts.put(SHOOTING_DISTANCES[0], 5.0);
+            FuelVolts.put(SHOOTING_DISTANCES[1], 6.5);
+            FuelVolts.put(SHOOTING_DISTANCES[2], 8.0);
+            FuelVolts.put(SHOOTING_DISTANCES[3], 9.5);
+            FuelVolts.put(SHOOTING_DISTANCES[4], 11.0);
         }
     }
 
     public static final class DriveConstants {
         public static final double DEADBAND = 0.05;
-        public static final double ALIGN_PID_P = 0.05;  // Increase back to 0.05
-public static final double ALIGN_PID_I = 0.0008;  
-public static final double ALIGN_PID_D = 0.025; // Increase D to handle faster approach
-        public static final double ALIGN_TOLERANCE_DEG = 2.0;
-        public static final double ALIGN_ROTATION_LIMIT = 8.0;
+        
+        
+        public static final double ALIGN_PID_P = 0.06; 
+        public static final double ALIGN_PID_I = 0.00;
+        public static final double ALIGN_PID_D = 0.005; 
+        
+        public static final double ALIGN_KS = 0.18; 
+        public static final double ALIGN_TOLERANCE_DEG = 0.5; 
+        public static final double ALIGN_TOLERANCE_VEL_DEG_PER_SEC = 5.0; 
+        
+        
+        public static final double ALIGN_MAX_VELOCITY_DEG_PER_SEC = 200.0;
+        public static final double ALIGN_MAX_ACCEL_DEG_PER_SEC_SQ = 150.0;
     }
 
     public static final class OperatorConstants {

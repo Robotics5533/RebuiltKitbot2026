@@ -28,7 +28,7 @@ import java.util.function.Supplier;
 
 public class CommandSwerveDrivetrain
     extends TunerSwerveDrivetrain implements Subsystem {
-  private static final double kSimLoopPeriod = 0.004; // 4 ms
+  private static final double kSimLoopPeriod = 0.004; 
   private Notifier m_simNotifier = null;
   private double m_lastSimTime;
 
@@ -127,10 +127,10 @@ public class CommandSwerveDrivetrain
     try {
       var config = RobotConfig.fromGUISettings();
       AutoBuilder.configure(
-          () -> getState().Pose, // Supplier of current robot pose
-          this::resetPose, // Consumer for seeding pose against auto
-          () -> getState().Speeds, // Supplier of current robot speeds
-          // Consumer of ChassisSpeeds and feedforwards to drive the robot
+          () -> getState().Pose, 
+          this::resetPose, 
+          () -> getState().Speeds, 
+          
           (speeds, feedforwards) -> setControl(
               m_pathApplyRobotSpeeds
                   .withSpeeds(ChassisSpeeds.discretize(speeds, 0.020))
@@ -139,15 +139,15 @@ public class CommandSwerveDrivetrain
                   .withWheelForceFeedforwardsY(
                       feedforwards.robotRelativeForcesYNewtons())),
           new PPHolonomicDriveController(
-              // PID constants for translation
+              
               new PIDConstants(10, 0, 0),
-              // PID constants for rotation
+              
               new PIDConstants(7, 0, 0)),
           config,
-          // Assume the path needs to be flipped for Red vs Blue, this is
-          // normally the case
+          
+          
           () -> DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red,
-          this // Subsystem for requirements
+          this 
       );
     } catch (Exception ex) {
       DriverStation.reportError(
@@ -186,14 +186,7 @@ public class CommandSwerveDrivetrain
         m_hasAppliedOperatorPerspective = true;
       });
     }
-    
-    // Seed field relative once when alliance is present to ensure Gyro is correct for Odometry/Vision
-    if (!m_hasSeededFieldRelative) {
-         DriverStation.getAlliance().ifPresent(alliance -> {
-             seedFieldRelative();
-             m_hasSeededFieldRelative = true;
-         });
-    }
+
   }
 
   public boolean isValidAllianceTag(int tagId) {
@@ -207,8 +200,6 @@ public class CommandSwerveDrivetrain
         ? Constants.LimelightConstants.RED_HUB_TAGS.contains(tagId)
         : Constants.LimelightConstants.BLUE_HUB_TAGS.contains(tagId);
   }
-
-  private boolean m_hasSeededFieldRelative = false;
 
     private void startSimThread() {
     m_lastSimTime = Utils.getCurrentTimeSeconds();
@@ -224,16 +215,6 @@ public class CommandSwerveDrivetrain
     });
     m_simNotifier.startPeriodic(kSimLoopPeriod);
   }
-
-  public void seedFieldRelative() {
-        var alliance = DriverStation.getAlliance().orElse(Alliance.Blue);
-        if (alliance == Alliance.Red) {
-            this.getPigeon2().setYaw(180);
-        } else {
-            this.getPigeon2().setYaw(0);
-        }
-    }
-
     /**
      * Adds a vision measurement to the Kalman Filter. This will correct the
    * odometry pose estimate while still accounting for measurement noise.

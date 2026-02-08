@@ -73,12 +73,17 @@ public class LimelightSubsystem extends SubsystemBase {
       degStDev *= 2.0;
     }
 
-    Matrix<N3, N1> standardDeviations = VecBuilder.fill(xyStDev, xyStDev, Math.toRadians(degStDev));
+    
+    
+    
+    Matrix<N3, N1> standardDeviations = VecBuilder.fill(xyStDev, xyStDev, Double.MAX_VALUE);
 
+    
     
     Pose2d correctedPose = new Pose2d(
         poseEstimate.pose.getTranslation(),
-        poseEstimate.pose.getRotation().plus(Rotation2d.fromDegrees(180)));
+        poseEstimate.pose.getRotation().plus(Rotation2d.fromDegrees(180))
+    );
 
     posePublisher.set(correctedPose);
 

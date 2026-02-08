@@ -1,11 +1,13 @@
 package frc.robot.controls;
 
+
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.Constants;
 import frc.robot.commands.AutoAlignHub;
+import frc.robot.commands.AutoTuneRotation;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.LimelightSubsystem;
 import frc.robot.subsystems.ShooterSubsystem;
@@ -21,7 +23,7 @@ public class Controls {
         operator = new CommandXboxController(Constants.OperatorConstants.OPERATOR_CONTROLLER_PORT);
     }
 
-    // Driver Inputs
+    
     public double getDriveX() {
         return -MathUtil.applyDeadband(driver.getLeftY(), Constants.DriveConstants.DEADBAND);
     }
@@ -34,13 +36,12 @@ public class Controls {
         return -MathUtil.applyDeadband(driver.getRightX(), Constants.DriveConstants.DEADBAND);
     }
 
-    // Driver Bindings
+    
     public void configureDriver(CommandSwerveDrivetrain drivetrain, LimelightSubsystem limelight) {
         driver.rightBumper().whileTrue(
                 new AutoAlignHub(drivetrain, limelight, driver));
 
-        driver.leftBumper().onTrue(
-                drivetrain.runOnce(drivetrain::seedFieldRelative));
+        driver.leftBumper().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
 
         driver.a().whileTrue(
                 drivetrain.applyRequest(() -> new com.ctre.phoenix6.swerve.SwerveRequest.SwerveDriveBrake()));
@@ -48,6 +49,9 @@ public class Controls {
         driver.b().whileTrue(drivetrain.applyRequest(
                 () -> new com.ctre.phoenix6.swerve.SwerveRequest.PointWheelsAt().withModuleDirection(
                         new Rotation2d(-driver.getLeftY(), -driver.getLeftX()))));
+
+        
+        driver.start().whileTrue(new AutoTuneRotation(drivetrain));
     }
 
     public void configureDriverWithShooter(ShooterSubsystem shooter, CommandSwerveDrivetrain drivetrain, LimelightSubsystem limelight) {
@@ -62,7 +66,7 @@ public class Controls {
         }, Set.of(shooter)).withName("Driver Align and Shoot"));
     }
 
-    // Operator Bindings
+    
     public void configureOperator(ShooterSubsystem shooter, CommandSwerveDrivetrain drivetrain, LimelightSubsystem limelight) {
         operator.leftBumper().whileTrue(shooter.intakeCommand());
         operator.rightBumper().whileTrue(shooter.launchCommand());

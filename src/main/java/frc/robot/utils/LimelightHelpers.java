@@ -391,7 +391,7 @@ public class LimelightHelpers {
         @JsonProperty("yaw")
         public double yaw;
 
-        // Parsed from data array
+        
         public double robotYaw;
         public double roll;
         public double pitch;
@@ -761,8 +761,8 @@ public class LimelightHelpers {
             if (this == obj) return true;
             if (obj == null || getClass() != obj.getClass()) return false;
             PoseEstimate that = (PoseEstimate) obj;
-            // We don't compare the timestampSeconds as it isn't relevant for equality and makes
-            // unit testing harder
+            
+            
             return Double.compare(that.latency, latency) == 0
                 && tagCount == that.tagCount
                 && Double.compare(that.tagSpan, tagSpan) == 0
@@ -911,7 +911,7 @@ public class LimelightHelpers {
         long timestamp = tsValue.timestamp;
         
         if (poseArray.length == 0) {
-            // Handle the case where no data is available
+            
             return new PoseEstimate();
         }
     
@@ -922,7 +922,7 @@ public class LimelightHelpers {
         double tagDist = extractArrayEntry(poseArray, 9);
         double tagArea = extractArrayEntry(poseArray, 10);
         
-        // Convert server timestamp from microseconds to seconds and adjust for latency
+        
         double adjustedTimestamp = (timestamp / 1000000.0) - (latency / 1000.0);
     
         int valsPerFiducial = 7;
@@ -930,7 +930,7 @@ public class LimelightHelpers {
         RawFiducial[] rawFiducials;
 
         if (poseArray.length != expectedTotalVals) {
-            // Array size mismatch - return empty array instead of null-filled array
+            
             rawFiducials = new RawFiducial[0];
         } else {
             rawFiducials = new RawFiducial[tagCount];
@@ -1001,7 +1001,7 @@ public class LimelightHelpers {
         RawDetection[] rawDetections = new RawDetection[numDetections];
     
         for (int i = 0; i < numDetections; i++) {
-            int baseIndex = i * valsPerEntry; // Starting index for this detection's data
+            int baseIndex = i * valsPerEntry; 
             int classId = (int) extractArrayEntry(rawDetectionArray, baseIndex);
             double txnc = extractArrayEntry(rawDetectionArray, baseIndex + 1);
             double tync = extractArrayEntry(rawDetectionArray, baseIndex + 2);
@@ -1588,7 +1588,7 @@ public class LimelightHelpers {
     public static IMUData getIMUData(String limelightName) {
         double[] imuData = getLimelightNTDoubleArray(limelightName, "imu");
         if (imuData == null || imuData.length < 10) {
-            return new IMUData();  // Returns object with all zeros
+            return new IMUData();  
         }
         return new IMUData(imuData);
     }
@@ -1787,7 +1787,7 @@ public class LimelightHelpers {
      */
     public static void SetFiducialDownscalingOverride(String limelightName, float downscale) 
     {
-        int d = 0; // pipeline
+        int d = 0; 
         if (downscale == 1.0)
         {
             d = 1;
